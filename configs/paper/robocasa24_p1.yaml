@@ -1,0 +1,136 @@
+# ThinkWAM RoboCasa24 P1 (paper Table "architecture and benchmark-specific
+# configuration" and Appendix "Optimization and Training Algorithm").
+# DeVA protocol: 1,199 replay-filtered demonstrations from 24 tasks, split by
+# episode into 1,080 training / 119 validation episodes (seed 7); three camera
+# views (left agent, right agent, wrist); 7D actions mapped to [-1, 1] with
+# the released low/high statistics; contact-heatmap affordance labels.
+# 40k steps, LR 1e-4 -> 1e-6 (one schedule for every trainable module), global
+# batch 80 (20 per GPU x 4 A100). All configured trainable modules optimize
+# from the start; the visual encoder stays frozen. Sampling is uniform over
+# windows belonging to the training episodes, not over episode identities.
+dataset: robocasa24
+dataset_root: /data/thinkwam/robocasa24_deva
+feature_cache: ""
+output_dir: /data/thinkwam/runs/paper/robocasa24_p1_40k
+
+online_vjepa: true
+vjepa_adapter_enabled: true
+vjepa_adapter_dim: 256
+vjepa_dim: 1024
+vjepa_views: 3
+visual_token_count: 1728
+qwen_dim: 896
+qwen_action_tokens: 64
+qwen_visual_tokens: 1152
+qwen_hidden_only: true
+text_max_length: 128
+compile_vjepa: true
+vjepa_compile_mode: reduce-overhead
+compile_action_dit: true
+action_dit_compile_mode: reduce-overhead
+
+action_dim: 7
+# The RoboCasa24 adapter supplies one zero proprioception channel to the
+# shared ActionDiT interface.
+proprio_dim: 1
+action_horizon: 16
+action_dit_hidden: 1024
+action_dit_layers: 16
+action_dit_heads: 32
+action_dit_inner_dim: 1536
+action_dit_future_tokens: 32
+flow_steps: 4
+memory_action_history: 8
+memory_observation_tokens: 256
+jepa_horizons: [7, 15, 31]
+jepa_token_counts: [288, 144, 72]
+jepa_observation_tokens: 1152
+memory_dim: 1024
+memory_slots: 16
+memory_layers: 2
+memory_heads: 8
+jepa_context_dim: 1024
+jepa_layers: 2
+jepa_heads: 8
+jepa_loss_weight: 0.5
+sigreg_loss_weight: 0.0
+sigreg_num_projections: 128
+sigreg_num_knots: 17
+sigreg_t_max: 3.0
+action_context_dim: 1024
+conditioning_mlp_hidden: 2048
+
+qwen_lora: true
+qwen_lora_rank: 32
+qwen_lora_alpha: 64
+qwen_lora_dropout: 0.1
+qwen_lora_target_modules: all-linear
+qwen_attn_implementation: flash_attention_2
+
+affordance_enabled: true
+robocasa24_require_affordance: true
+affordance_decoder_dim: 256
+affordance_decoder_layers: 2
+affordance_decoder_heads: 8
+affordance_channels: 1
+affordance_target_key: affordance
+# lambda_aff = 0.1 and lambda_Dice = 0.5; alpha_bar and the upstream-gradient
+# scale are fixed at 0.05; gate = sigmoid((rho_bar - 0.70) / 0.10).
+affordance_loss_weight: 0.10
+affordance_dice_weight: 0.5
+affordance_loss_ramp_steps: 0
+require_affordance_targets: true
+
+video_model_dim: 1024
+video_model_layers: 2
+video_model_heads: 8
+video_context_tokens: 256
+# lambda_0 / lambda_1 = 1.0 / 1.0, lambda_jepa / lambda_res = 0.5 / 0.2.
+video_residual_loss_weight: 0.2
+action_refinement_loss_weight: 1.0
+first_action_loss_weight: 1.0
+action_loss_weight: 1.0
+video_condition_steps: 4
+video_condition_train_steps: 1
+action_condition_scale: 1.0
+p1_stage: joint
+freeze_qwen_steps: 0
+freeze_vjepa_steps: 0
+freeze_memory_steps: 0
+affordance_memory_start_step: 0
+affordance_memory_ramp_steps: 0
+affordance_memory_max_scale: 0.05
+affordance_confidence_threshold: 0.70
+affordance_confidence_temperature: 0.10
+affordance_upstream_start_step: 0
+affordance_upstream_ramp_steps: 0
+affordance_upstream_max_scale: 0.05
+
+p0_checkpoint: /data/thinkwam/runs/paper/robocasa24_p0_20k/checkpoints/checkpoint_step_0020000.pt
+image_augmentations: false
+batch_size: 20
+gradient_accumulation_steps: 1
+learning_rate: 1.0e-4
+memory_learning_rate: 1.0e-4
+qwen_lora_learning_rate: 1.0e-4
+vjepa_adapter_learning_rate: 1.0e-4
+min_learning_rate: 1.0e-6
+weight_decay: 0.0
+warmup_ratio: 0.03
+num_workers: 8
+dataloader_prefetch_factor: 2
+dataloader_persistent_workers: true
+dataloader_pin_memory: true
+dataloader_worker_threads: 1
+mixed_precision: bf16
+gradient_checkpointing: false
+checkpoint_save_limit: 3
+optimizer_beta1: 0.9
+optimizer_beta2: 0.95
+max_steps: 40000
+eval_every: 5000
+eval_batches: 32
+eval_fraction: 0.1
+tensorboard: true
+open_loop_eval: true
+seed: 7

@@ -1,0 +1,8 @@
+torch
+torchvision
+transformers
+peft
+pyyaml
+numpy
+tensorboard
+h5py
