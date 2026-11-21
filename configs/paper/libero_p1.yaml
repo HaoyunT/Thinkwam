@@ -1,0 +1,144 @@
+# ThinkWAM LIBERO P1 (paper Table "architecture and benchmark-specific
+# configuration" and Appendix "Optimization and Training Algorithm").
+# 40k steps, LR 1e-4 -> 1e-5 (one schedule for every trainable module), global
+# batch 96 (24 per GPU x 4 A100). Training data: the standard demonstrations of
+# all 40 LIBERO tasks only; LIBERO-Plus is evaluated zero-shot with the same
+# checkpoint. Image augmentation p=0.5 on training windows, off at validation.
+dataset: libero
+dataset_root: /data/thinkwam/datasets/LIBERO
+feature_cache: ""
+output_dir: /data/thinkwam/runs/paper/libero_p1_40k
+
+online_vjepa: true
+vjepa_adapter_enabled: true
+vjepa_adapter_dim: 256
+vjepa_dim: 1024
+vjepa_views: 2
+visual_token_count: 1152
+qwen_dim: 896
+qwen_action_tokens: 64
+qwen_visual_tokens: 1152
+qwen_hidden_only: true
+text_max_length: 128
+compile_vjepa: true
+vjepa_compile_mode: reduce-overhead
+compile_action_dit: true
+action_dit_compile_mode: reduce-overhead
+action_dim: 7
+proprio_dim: 8
+action_horizon: 16
+action_dit_hidden: 1024
+action_dit_layers: 16
+action_dit_heads: 32
+action_dit_inner_dim: 1536
+action_dit_future_tokens: 32
+flow_steps: 4
+memory_action_history: 8
+memory_observation_tokens: 256
+jepa_horizons: [7, 15, 31]
+jepa_token_counts: [288, 144, 72]
+jepa_observation_tokens: 1152
+memory_dim: 1024
+memory_slots: 16
+memory_layers: 2
+memory_heads: 8
+jepa_context_dim: 1024
+jepa_layers: 2
+jepa_heads: 8
+jepa_loss_weight: 0.5
+sigreg_loss_weight: 0.0
+sigreg_num_projections: 128
+sigreg_num_knots: 17
+sigreg_t_max: 3.0
+action_context_dim: 1024
+conditioning_mlp_hidden: 2048
+
+qwen_lora: true
+qwen_lora_rank: 32
+qwen_lora_alpha: 64
+qwen_lora_dropout: 0.1
+qwen_lora_target_modules: all-linear
+qwen_attn_implementation: flash_attention_2
+
+# Affordance guidance: lambda_aff warms up to 0.05 over 3k steps; alpha_bar and
+# the upstream-gradient scale warm up linearly from 0 to 0.05 from the start of
+# P1; gate = sigmoid((rho_bar - 0.70) / 0.10).
+affordance_enabled: true
+affordance_decoder_dim: 256
+affordance_decoder_layers: 2
+affordance_decoder_heads: 8
+affordance_channels: 1
+affordance_target_key: affordance
+affordance_loss_weight: 0.05
+affordance_dice_weight: 0.5
+affordance_loss_ramp_steps: 3000
+require_affordance_targets: true
+affordance_memory_start_step: 0
+affordance_memory_ramp_steps: 5000
+affordance_memory_max_scale: 0.05
+affordance_confidence_threshold: 0.70
+affordance_confidence_temperature: 0.10
+affordance_upstream_start_step: 0
+affordance_upstream_ramp_steps: 5000
+affordance_upstream_max_scale: 0.05
+
+
+# lambda_0 / lambda_1 = 1.2 / 1.4, lambda_jepa / lambda_res = 0.5 / 0.2.
+video_model_dim: 1024
+video_model_layers: 2
+video_model_heads: 8
+video_context_tokens: 256
+video_residual_loss_weight: 0.2
+first_action_loss_weight: 1.2
+action_refinement_loss_weight: 1.4
+action_loss_weight: 1.0
+video_condition_steps: 4
+video_condition_train_steps: 1
+action_condition_scale: 1.0
+
+# Within P1, memory/predictor unfreeze at 5k steps, followed by Qwen LoRA
+# and the V-JEPA observation adapter at 10k. The encoder stays frozen.
+p1_stage: staged
+freeze_qwen_steps: 10000
+freeze_vjepa_steps: 10000
+freeze_memory_steps: 5000
+p0_checkpoint: /data/thinkwam/runs/paper/libero_p0_40k/checkpoints/checkpoint_step_0040000.pt
+
+# Standard LIBERO demonstrations only: no LIBERO-Plus mixture and no task
+# oversampling. The image augmentation (p=0.5) is applied to training windows.
+image_augmentations: true
+image_augmentation_probability: 0.50
+image_illumination_probability: 0.50
+image_texture_probability: 0.35
+image_camera_probability: 0.25
+image_noise_probability: 0.25
+image_object_position_probability: 0.25
+image_max_translation: 12
+image_noise_std: 0.025
+
+batch_size: 24
+gradient_accumulation_steps: 1
+learning_rate: 1.0e-4
+memory_learning_rate: 1.0e-4
+qwen_lora_learning_rate: 1.0e-4
+vjepa_adapter_learning_rate: 1.0e-4
+min_learning_rate: 1.0e-5
+weight_decay: 0.0
+warmup_ratio: 0.03
+num_workers: 8
+dataloader_prefetch_factor: 4
+dataloader_persistent_workers: true
+dataloader_pin_memory: true
+dataloader_worker_threads: 1
+mixed_precision: bf16
+gradient_checkpointing: false
+checkpoint_save_limit: 3
+optimizer_beta1: 0.9
+optimizer_beta2: 0.95
+max_steps: 40000
+eval_every: 5000
+eval_batches: 32
+eval_fraction: 0.1
+tensorboard: true
+open_loop_eval: true
+seed: 7
