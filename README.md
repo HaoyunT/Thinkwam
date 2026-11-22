@@ -18,7 +18,13 @@ ThinkWAM is a latent world-action model for robot manipulation. It proposes an a
 ## Overview
 
 <p align="center">
-  <a href="docs/assets/overview.png"><img src="docs/assets/overview.png" width="100%" alt="ThinkWAM method and benchmark results" /></a>
+  <a href="docs/assets/overview.png">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/overview-dark.png" />
+      <source media="(prefers-color-scheme: light)" srcset="docs/assets/overview.png" />
+      <img src="docs/assets/overview.png" width="100%" alt="ThinkWAM method and benchmark results" />
+    </picture>
+  </a>
 </p>
 
 ## Getting started
